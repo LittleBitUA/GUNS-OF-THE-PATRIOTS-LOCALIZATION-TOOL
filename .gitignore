@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+unpack/
+edit/
+build/
+work/
+*.dds
+*.png
+*.pak
+*.txt
+!README*.txt
