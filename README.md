@@ -334,6 +334,17 @@ python src/txn_png.py inject edited.png --txn title/cache/0015161c.txn --apply
 
 ---
 
+## Acknowledgements · Подяки
+
+Thanks to **[otac0n](https://github.com/otac0n)** and the **MGN Community**
+for their research into the Metal Gear file formats and the knowledge they
+share openly.
+
+Дякуємо **[otac0n](https://github.com/otac0n)** та **спільноті MGN** за
+дослідження форматів Metal Gear і знання, якими вони відкрито діляться.
+
+---
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
