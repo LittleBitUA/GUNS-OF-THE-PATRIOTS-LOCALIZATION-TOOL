@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import numpy as np
 
-DXT1, DXT5, RGBA32 = 0x09, 0x0B, 0x03
-NAMES = {DXT1: 'DXT1', DXT5: 'DXT5', RGBA32: 'RGBA32'}
+DXT1, DXT3, DXT5, RGBA32 = 0x09, 0x0A, 0x0B, 0x03
+NAMES = {DXT1: 'DXT1', DXT3: 'DXT3', DXT5: 'DXT5', RGBA32: 'RGBA32'}
 
 COLS = 32
 AZ = slice(1, 27)               # columns of row 1 holding 'A'..'Z'
@@ -24,7 +24,7 @@ MIN_GAP = 1.25                  # lowest real atlas 1.47, highest foliage 1.01
 # ------------------------------------------------------------------- dds --
 
 def level_size(w: int, h: int, fmt: int) -> int:
-    if fmt in (DXT1, DXT5):
+    if fmt in (DXT1, DXT3, DXT5):
         return (max(1, (w + 3) // 4) * max(1, (h + 3) // 4)
                 * (8 if fmt == DXT1 else 16))
     return w * h * 4
@@ -64,7 +64,7 @@ def decode_bc(data: bytes, w: int, h: int, fmt: int) -> np.ndarray:
     from PIL import Image
     import io, struct
 
-    fourcc = b'DXT1' if fmt == DXT1 else b'DXT5'
+    fourcc = {DXT1: b'DXT1', DXT3: b'DXT3'}.get(fmt, b'DXT5')
     n = level_size(w, h, fmt)
     payload = data[:n] + bytes(max(0, n - len(data)))
 

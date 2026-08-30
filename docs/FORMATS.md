@@ -55,7 +55,8 @@ noted below.
       u32 texCount,     u32 texOffset,  u32 0, u32 0
 
 image[i]  16 bytes:  u32 (width << 16) | height
-                     u32 (format << 16) | mipFlags     0x0B = DXT5, 0x09 = DXT1
+                     u32 (format << 16) | mipFlags
+                         0x09 = DXT1, 0x0A = DXT3, 0x0B = DXT5, 0x03 = ARGB32
                      u32 start, u32 end                cumulative, 16-byte padded
 
 texture[i] 48 bytes: u32 type, u32 hash, u32 setStrcode,
@@ -89,7 +90,11 @@ do not try to read pixels out of them.
   the transparent mode in ~85% of blocks, so an encoder that ignores it turns
   every soft edge hard.
 - **DXT3/DXT5**, 16 bytes per block: an alpha block then a DXT1-style colour
-  block. DXT5 alpha interpolates 8 levels between two endpoints.
+  block. DXT5 alpha interpolates 8 levels between two endpoints; DXT3 alpha is
+  explicit 4 bits per pixel. (MGS4 itself ships no DXT3 texture - 34,854 DXT1 /
+  54,177 DXT5 / 91 uncompressed in a full unpack - but the id is mapped.)
+- **Uncompressed** (format 0x03): stored **A, R, G, B** byte order - the first
+  byte of every pixel is alpha, not red.
 
 `mgstex.decode_bc` decodes via Pillow's DDS reader (a reference implementation).
 `mgsbc.encode` writes both, choosing the punch-through mode for DXT1 when a

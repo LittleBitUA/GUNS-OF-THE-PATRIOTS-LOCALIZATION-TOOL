@@ -1,4 +1,4 @@
-r"""BC1 / BC3 (DXT1 / DXT5) block encoding, and surgical patching.
+r"""BC1 / BC2 / BC3 (DXT1 / DXT3 / DXT5) block encoding, and surgical patching.
 
 `mgstex.decode_bc` reads these; this writes them.
 
@@ -41,7 +41,7 @@ import numpy as np
 # is not a harmless duplicate: `patch_rect` picks its stride from this constant
 # while `encode_block` picks its length from the same one, so a mismatch writes
 # 16-byte blocks at an 8-byte stride and quietly shreds the texture.
-from mgstex import DXT1, DXT5
+from mgstex import DXT1, DXT3, DXT5
 
 
 def _rgb565(rgb):
@@ -145,15 +145,30 @@ def encode_color_block(rgba, allow_alpha: bool = True) -> bytes:
             + bits.to_bytes(4, 'little'))
 
 
-def encode_block(rgba: np.ndarray, fmt: int = DXT5) -> bytes:
-    """One 4x4 RGBA block -> 8 (BC1) or 16 (BC3) bytes.
+def encode_bc2_alpha(a: np.ndarray) -> bytes:
+    """16 alpha values -> the 8-byte BC2 (DXT3) EXPLICIT alpha block.
 
-    Only BC1 gets the punch-through alpha mode; in BC3 the alpha lives in its
-    own block, and using c0 <= c1 there would throw away a quarter of the
+    BC2 stores plain 4 bits per pixel - no endpoints, no interpolation.
+    """
+    q = (a.reshape(-1).astype(np.uint16) * 15 + 127) // 255
+    out = bytearray(8)
+    for i in range(8):
+        out[i] = int(q[2 * i]) | (int(q[2 * i + 1]) << 4)
+    return bytes(out)
+
+
+def encode_block(rgba: np.ndarray, fmt: int = DXT5) -> bytes:
+    """One 4x4 RGBA block -> 8 (BC1) or 16 (BC2/BC3) bytes.
+
+    Only BC1 gets the punch-through alpha mode; in BC2/BC3 the alpha lives in
+    its own half, and using c0 <= c1 there would throw away a quarter of the
     colour resolution for nothing.
     """
     if fmt == DXT1:
         return encode_color_block(rgba, allow_alpha=True)
+    if fmt == DXT3:
+        return (encode_bc2_alpha(rgba[..., 3])
+                + encode_color_block(rgba, allow_alpha=False))
     return (encode_alpha_block(rgba[..., 3])
             + encode_color_block(rgba, allow_alpha=False))
 

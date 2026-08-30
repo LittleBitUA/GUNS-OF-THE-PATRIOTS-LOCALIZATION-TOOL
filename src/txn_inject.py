@@ -31,8 +31,8 @@ from PIL import Image
 import mgstex, mgsbc
 import vpak
 
-FMT = {'DXT1': mgstex.DXT1, 'DXT5': mgstex.DXT5}
-FCC = {mgstex.DXT1: b'DXT1', mgstex.DXT5: b'DXT5'}
+FMT = {'DXT1': mgstex.DXT1, 'DXT3': mgstex.DXT3, 'DXT5': mgstex.DXT5}
+FCC = {mgstex.DXT1: b'DXT1', mgstex.DXT3: b'DXT3', mgstex.DXT5: b'DXT5'}
 
 
 def read_dds(path):
