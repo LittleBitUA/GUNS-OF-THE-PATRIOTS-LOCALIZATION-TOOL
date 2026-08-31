@@ -169,8 +169,34 @@ that got longer — see the length tip above. Long dialogue does not have this
 problem.
 
 **Do fonts live with the textures?** Yes — the fonts are textures. There are
-about 20 distinct glyph atlases, each duplicated many times across the game (the
-main one has 75 copies). `txnup_fonts_strict.py` finds them.
+about 20 distinct glyph atlases, duplicated into 336 copies across the game.
+`txnup_fonts_strict.py` finds them. Patch **every copy**, not only the screens
+you walked through: an unpatched sheet is what puts `ä´ä°` on screen where a
+word should be.
+
+**How does the game actually draw a letter?** By the **raw byte**. There is no
+code-point lookup — the byte indexes a cell in the atlas directly. So an
+alphabet outside Latin-1 needs its own single-byte code page, painted into free
+cells of the sheet. The whole procedure, the traps, and a table that tells you
+which mistake you made from what you see on screen are in
+**[docs/FONTS.md](docs/FONTS.md)**.
+
+**My translated line vanished completely — why?** The game draws some widgets
+with a bitmap atlas and others with a TrueType face. A single-byte string sent
+to a TrueType widget is not valid UTF-8, so the engine drops the whole string;
+if the line begins with ASCII, only that prefix survives. The opposite mistake
+(UTF-8 into a bitmap widget) draws one glyph per two bytes, with gaps.
+
+**Then how do I tell which renderer a string uses?** It is **not recorded in
+the text files** — we checked four ways, and `docs/FONTS.md` lists them. The
+widget id is the best predictor available; individual keys inside one widget
+can go the other way, so keep a short per-key exception list.
+
+**Are the mipmaps where I expect them?** No. A texture cache is split across a
+pair of `.dlz` files: `<name>_d.dlz` holds mip 0 on its own and `<name>.dlz`
+holds the rest, so a naive concatenation gives you the chain backwards. Pair
+them by the `parent` field in the entry header, which states exactly how many
+bytes belong in front. Details in [docs/FORMATS.md](docs/FORMATS.md).
 
 ---
 ---
@@ -329,8 +355,32 @@ python src/txn_png.py inject edited.png --txn title/cache/0015161c.txn --apply
 довшим. Дивись підказку про довжину вище. Довгі діалоги цієї проблеми не мають.
 
 **Шрифти теж серед текстур?** Так — шрифти це текстури. Є ~20 різних атласів
-гліфів, кожен продубльований багато разів (головного — 75 копій).
-`txnup_fonts_strict.py` їх знаходить.
+гліфів, розмножених у 336 копій. `txnup_fonts_strict.py` їх знаходить. Патчити
+треба **кожну копію**, а не лише відвідані екрани: непропатчений аркуш — це і є
+той `ä´ä°` на екрані замість слова.
+
+**Як гра взагалі малює літеру?** За **сирим байтом**. Шляху через код-поїнт
+немає — байт напряму індексує комірку в атласі. Тому алфавітові поза Latin-1
+потрібна власна однобайтова кодова сторінка, намальована у вільних комірках.
+Уся процедура, пастки й таблиця «що бачу на екрані → яку помилку зробив» — у
+**[docs/FONTS.md](docs/FONTS.md)**.
+
+**Перекладений рядок зник повністю — чому?** Одні віджети гра малює бітмапним
+атласом, інші — шрифтом TrueType. Однобайтовий рядок, що потрапив у
+TrueType-віджет, не є валідним UTF-8, тож двигун відкидає його цілком; якщо
+рядок починається з ASCII — виживе лише цей префікс. Зворотна помилка (UTF-8 у
+бітмапний віджет) дає один гліф на два байти, з прогалинами.
+
+**То як дізнатись, який рендерер у рядка?** Цього **немає в текстових
+файлах** — перевірено чотирма способами, вони перелічені в `docs/FONTS.md`.
+Найкращий предиктор — id віджета, але окремі ключі всередині одного віджета
+можуть поводитись навпаки, тож потрібен короткий список винятків.
+
+**Чи мипи там, де очікуєш?** Ні. Кеш текстури розрізаний на два `.dlz`:
+`<назва>_d.dlz` тримає сам mip 0, а `<назва>.dlz` — решту, тож наївне
+склеювання дає ланцюг навпаки. Парувати треба за полем `parent` у шапці
+запису — воно каже точно, скільки байтів має йти перед ним. Деталі в
+[docs/FORMATS.md](docs/FORMATS.md).
 
 ---
 

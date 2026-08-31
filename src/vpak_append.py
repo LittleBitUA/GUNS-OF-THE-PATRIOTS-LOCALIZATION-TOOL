@@ -33,7 +33,9 @@ sys.path.insert(0, HERE)
 import lz4.block
 import vpak
 
-STOCK = r'E:\Localization\MGS4\stock\vpak_relocate'
+# Where the relocation registry is kept.  Override with MGS4_RELOCATE_DIR.
+STOCK = os.environ.get('MGS4_RELOCATE_DIR') or os.path.join(
+    os.path.expanduser('~'), '.mgs4-tools', 'vpak_relocate')
 LEVEL = 12
 
 
@@ -82,10 +84,14 @@ def append_replace(pak: str, name: str, data: bytes, dry: bool = False) -> bool:
         return True
 
     idx = _load()
+    # `pak_size` is the guard: every other value here is an ABSOLUTE offset
+    # into this pak as it is right now, and relocating moves the table of
+    # contents.  Anything that replays these entries must refuse when the
+    # pak's current size differs, or it will write over the moved TOC.
     idx.setdefault(os.path.basename(pak), {})[name] = {
         'off': rec['off'], 'comp': rec['comp'], 'csize': rec['csize'],
         'chunks': rec['chunks'], 'field_off': rec['field_off'],
-        'chunk_off': rec['chunk_off']}
+        'chunk_off': rec['chunk_off'], 'pak_size': size}
     _save(idx)
 
     with open(pak, 'r+b') as f:

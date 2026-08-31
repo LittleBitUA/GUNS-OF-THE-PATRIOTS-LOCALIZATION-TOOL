@@ -174,7 +174,74 @@ holds audio. These are catalogued but this toolkit does not edit them.
 
 ## Fonts
 
-The fonts are textures. A strict scan of every unpacked DDS finds about **20
-distinct glyph atlases**, each duplicated many times (the main one exists in 75
-copies across the game). They are Latin-1 grids. Replacing them uses exactly the
-texture path above; `txnup_fonts_strict.py` locates them.
+The fonts are textures, and the engine indexes them by the **raw byte** of the
+string — there is no code-point path. That has enough consequences to deserve
+its own document: see **[FONTS.md](FONTS.md)** for the atlas layout, how to add
+an alphabet outside Latin-1, how to read the four different ways it fails on
+screen, and why the choice between the bitmap atlas and the TrueType face is
+not recorded anywhere in the text files.
+
+`txnup_fonts_strict.py` locates the atlases: about **20 distinct glyph sheets**,
+duplicated into **336 copies** across the archives. Patch every copy, not only
+the screens you happened to walk through.
+
+---
+
+## Mip chains live in TWO files
+
+A texture cache is split across a pair of `.dlz` files, and the halves are
+stored in the order the engine wants to stream them, which is not the order you
+want to read them:
+
+```
+<name>_d.dlz     mip level 0, on its own
+<name>.dlz       the rest of the chain, levels 1..n
+```
+
+`<name>.dlz` comes first in load order but holds the *small* levels, so a naive
+concatenation gives you the chain backwards. This was first reported by the
+author of the **Codec** tool, whose fix concatenates the entries in reverse.
+
+**You do not have to infer the order — it is declared in the data.** Each entry
+has a 0x20-byte header; the `u32` at `+0x0C` is the number of bytes that belong
+*in front* of this entry:
+
+```
+parent == 0     this entry already starts at level 0
+parent >  0     this is the tail; exactly `parent` bytes of base data go first,
+                and they are the entry with the same (strcode, index)
+                whose size == parent
+```
+
+Measured over 10753 chains: **8440 tails, every one matched its base**, and
+9314 chains assemble to exactly the byte size the mip pyramid predicts. The
+remainder are textures shipped without mips at all.
+
+**Do not read the `mips` field as a content descriptor.** A `nodld` cache
+stores level 0 alone and still stamps the same value there, so 1225 entries
+that look like a complete chain hold only the base level. Compare the entry
+size against the pyramid arithmetic instead.
+
+When you rebuild a texture, the split has to be preserved: level 0 goes back
+into `<name>_d.dlz`, the tail into `<name>.dlz`.
+
+---
+
+## Pitfalls when re-encoding a texture
+
+Four mistakes that each cost a working day:
+
+- **Validate your block codec against an independent implementation.** A
+  hand-written BC decoder that is subtly wrong produces images that look
+  plausibly grungy rather than obviously broken, and you will blame the game.
+  Decode the same block with a second library and diff.
+- **DXT1 has punch-through alpha.** When `c0 <= c1` the fourth palette entry is
+  transparent black, not a colour. An encoder that ignores this makes edited
+  art come back harsh at every soft edge.
+- **Compare textures premultiplied.** In DXT5 the colour of a fully transparent
+  texel is arbitrary, so a raw RGB diff between two versions of the same image
+  reports enormous differences that are not there. Multiply by alpha first.
+  (This exact mistake produced 98 false failures in one verification run.)
+- **Non-square textures.** Vertical sizing of non-square `.txn` images is a
+  known source of off-by-one height bugs; check a tall or wide sheet
+  explicitly rather than trusting a square test case.
