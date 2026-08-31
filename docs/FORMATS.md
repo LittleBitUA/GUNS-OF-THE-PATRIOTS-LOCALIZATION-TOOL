@@ -185,12 +185,17 @@ holds audio. These are catalogued but this toolkit does not edit them.
 
 ## Text that is NOT in the text containers
 
-Three places a translator loses time looking in the wrong file:
+Three places a translator loses time, and one claim worth correcting:
 
-**Cutscene subtitles** are not in `common\localization`. They sit as
-**plain text** inside `demoSwapped.dat` in `ww\dat_compressed`, with the five
-languages laid out one after another in the same file. Its sibling
-`movieSwapped` is video only — there is no text in it.
+**Cutscene subtitles ARE in `common\localization`** — in the `demo` and
+`movie` containers (`demo_en` alone holds 115 groups and 4,309 lines). That is
+where you translate them.
+
+What confuses the search is that a **second, verbatim copy** of the same lines
+is embedded in the streamed cutscene data: `ww/demoSwapped.1.dat`, a 1.7 GB
+entry inside `dat_compressed.1.pak`. Sampling 300 subtitle lines from
+`demo_en`, 286 appear in it byte for byte. It is a duplicate, not the source —
+do not translate there.
 
 **The intro captions and the end credits are textures.** "In the not too
 distant future...", the staff roll, and the on-screen chapter cards exist in no

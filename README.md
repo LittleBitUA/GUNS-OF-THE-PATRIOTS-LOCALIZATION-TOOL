@@ -11,7 +11,23 @@ do not have to rediscover it from scratch.
 
 Made in Ukraine by **Dmytro Bidlov** — [Little Bit Team](https://t.me/LittleBitUA)
 
-> *(Українською — [нижче](#guns-of-the-patriots-localization-tool-українською).)*
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Licence](https://img.shields.io/badge/licence-MIT-green)
+![Game](https://img.shields.io/badge/MGS4-Master%20Collection%20(PC)-lightgrey)
+
+**[Українською ↓](#guns-of-the-patriots-localization-tool-українською)**
+
+---
+
+### Contents
+
+| | |
+|---|---|
+| [What is in here](#what-is-in-here) · [Requirements](#requirements) | start here |
+| [Text](#text-translate-the-dialogue-and-menus) · [Textures](#textures-replace-an-image) | the two workflows |
+| [The scripts](#the-scripts) · [FAQ](#how-the-formats-work--faq) | reference |
+| **[docs/FORMATS.md](docs/FORMATS.md)** | every container, in detail |
+| **[docs/FONTS.md](docs/FONTS.md)** | how text is drawn, and adding an alphabet |
 
 ---
 
@@ -175,11 +191,16 @@ you walked through: an unpatched sheet is what puts `ä´ä°` on screen where a
 word should be.
 
 **I translated everything and some text is still English — where is it?**
-Three places it will not be. Cutscene subtitles are **plain text inside
-`demoSwapped.dat`** in `ww\dat_compressed`, not in `common\localization`.
-Camouflage and item names live in **457 `.octs` files**, a text container
-that is easy to miss. And the intro captions and end credits are **textures**,
-baked images with no string behind them at all.
+Two places you have not looked. Camouflage and item names live in **457
+`.octs` files**, a text container that is easy to miss. And the intro captions
+and the end credits are **textures** — baked images with no string behind them
+at all.
+
+**And where are the cutscene subtitles?** In `common\localization`, in the
+`demo` and `movie` containers — `demo_en` alone holds 4,309 lines. A verbatim
+**copy** of the same text is also embedded in the streamed cutscene data
+(`ww/demoSwapped.1.dat`, inside `dat_compressed.1.pak`), which is easy to
+mistake for the source. Translate the `localization` copy.
 
 **How does the game actually draw a letter?** By the **raw byte**. There is no
 code-point lookup — the byte indexes a cell in the atlas directly. So an
@@ -219,6 +240,20 @@ PC-видання зберігає **текстури** й **текст**. У ц
 влаштований, — щоб інші команди не відкривали це заново.
 
 Зроблено в Україні Дмитром Бидловим — [Little Bit Team](https://t.me/LittleBitUA)
+
+---
+
+### Зміст
+
+| | |
+|---|---|
+| [Що тут є](#що-тут-є) · [Що потрібно](#що-потрібно) | почни звідси |
+| [Текст](#текст-переклад-діалогів-і-меню) · [Текстури](#текстури-заміна-зображення) | два робочі процеси |
+| [Скрипти](#скрипти) · [FAQ](#як-влаштовані-формати--faq) | довідка |
+| **[docs/FORMATS.md](docs/FORMATS.md)** | кожен контейнер, детально |
+| **[docs/FONTS.md](docs/FONTS.md)** | як малюється текст і як додати алфавіт |
+
+---
 
 ## Що тут є
 
@@ -366,12 +401,16 @@ python src/txn_png.py inject edited.png --txn title/cache/0015161c.txn --apply
 треба **кожну копію**, а не лише відвідані екрани: непропатчений аркуш — це і є
 той `ä´ä°` на екрані замість слова.
 
-**Переклав усе, а частина тексту досі англійська — де вона?** Три місця, де
-її не буде. Субтитри катсцен — це **звичайний текст усередині
-`demoSwapped.dat`** у `ww\dat_compressed`, а не в `common\localization`.
-Назви камуфляжів і предметів лежать у **457 файлах `.octs`** — текстовому
-контейнері, який легко проґавити. А вступні написи й фінальні титри — це
-**текстури**, запечені зображення, за якими взагалі немає рядка.
+**Переклав усе, а частина тексту досі англійська — де вона?** Два місця, куди
+ти не заглядав. Назви камуфляжів і предметів лежать у **457 файлах `.octs`** —
+текстовому контейнері, який легко проґавити. А вступні написи й фінальні
+титри — це **текстури**, запечені зображення, за якими взагалі немає рядка.
+
+**А де субтитри катсцен?** У `common\localization`, у контейнерах `demo` і
+`movie` — самий лише `demo_en` містить 4 309 рядків. Дослівна **копія** того
+самого тексту лежить ще й у потокових даних катсцен
+(`ww/demoSwapped.1.dat`, усередині `dat_compressed.1.pak`), і її легко
+сплутати з джерелом. Перекладати треба копію з `localization`.
 
 **Як гра взагалі малює літеру?** За **сирим байтом**. Шляху через код-поїнт
 немає — байт напряму індексує комірку в атласі. Тому алфавітові поза Latin-1
