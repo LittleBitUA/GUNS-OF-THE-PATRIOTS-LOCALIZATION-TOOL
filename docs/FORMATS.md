@@ -154,6 +154,14 @@ the moment that label appears. Long dialogue, subtitles and briefings have no
 such limit and can be any length. Keep short UI labels at or under the
 original character count.
 
+The list is bounded at 1025 entries, and the overflow always faults at the
+same instruction, so a crash that reproduces on one specific screen and
+nowhere else is almost certainly this. To find which string, swap whole
+container files rather than reasoning about them: put the stock file back,
+confirm the crash goes away, then bisect your translated file in halves. An
+audit can prove a file is well-formed; it can never prove the engine accepts
+it.
+
 ---
 
 ## Other containers (read-only for now)
@@ -163,12 +171,49 @@ original character count.
 
 - `.txn` — texture descriptors (headers only, as above)
 - `.cnf` — a plain-text load manifest listing which `.txn` a stage or slot uses
+- `.octs` — **a text container**, and an easy one to miss: 457 files holding
+  camouflage and item names in five languages. If your camo names stay English
+  after you have translated every `common\localization` file, they are here
 - `.mdn`, `.geom`, `.vlm` — models
 - `.la2` — binary UI layouts (no readable text in them)
 - `.gcx` — scripts
 
 `ww\dat_compressed` holds the streamed cutscene and movie data. `sound_compressed`
 holds audio. These are catalogued but this toolkit does not edit them.
+
+---
+
+## Text that is NOT in the text containers
+
+Three places a translator loses time looking in the wrong file:
+
+**Cutscene subtitles** are not in `common\localization`. They sit as
+**plain text** inside `demoSwapped.dat` in `ww\dat_compressed`, with the five
+languages laid out one after another in the same file. Its sibling
+`movieSwapped` is video only — there is no text in it.
+
+**The intro captions and the end credits are textures.** "In the not too
+distant future...", the staff roll, and the on-screen chapter cards exist in no
+text container at all. They are baked images, so translating them means the
+texture path, not the text path.
+
+**Some UI strings are baked into atlases too.** Before concluding that a label
+is missing from the containers, check whether it is drawn as part of a sheet.
+
+---
+
+## Replacing a file while the game runs
+
+If you use a runtime override loader instead of patching the archives, note
+that the engine does not always ask for the plain asset name. Alongside
+`<asset>_<n>.data` it requests a twin in a `temp` subfolder named
+`<asset>_<n>_<hash>.data`, and for many textures **only the twin is ever
+read**. An override placed under the plain name alone will silently do
+nothing; match the exact name the loader logs.
+
+Fonts supplied as `.ttf` under `common\font` are a separate case: the game
+reads them, but through a path a file-override layer does not intercept, so
+replacing a TrueType face that way does not work.
 
 ---
 

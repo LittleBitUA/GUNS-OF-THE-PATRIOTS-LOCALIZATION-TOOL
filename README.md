@@ -174,6 +174,13 @@ about 20 distinct glyph atlases, duplicated into 336 copies across the game.
 you walked through: an unpatched sheet is what puts `ä´ä°` on screen where a
 word should be.
 
+**I translated everything and some text is still English — where is it?**
+Three places it will not be. Cutscene subtitles are **plain text inside
+`demoSwapped.dat`** in `ww\dat_compressed`, not in `common\localization`.
+Camouflage and item names live in **457 `.octs` files**, a text container
+that is easy to miss. And the intro captions and end credits are **textures**,
+baked images with no string behind them at all.
+
 **How does the game actually draw a letter?** By the **raw byte**. There is no
 code-point lookup — the byte indexes a cell in the atlas directly. So an
 alphabet outside Latin-1 needs its own single-byte code page, painted into free
@@ -358,6 +365,13 @@ python src/txn_png.py inject edited.png --txn title/cache/0015161c.txn --apply
 гліфів, розмножених у 336 копій. `txnup_fonts_strict.py` їх знаходить. Патчити
 треба **кожну копію**, а не лише відвідані екрани: непропатчений аркуш — це і є
 той `ä´ä°` на екрані замість слова.
+
+**Переклав усе, а частина тексту досі англійська — де вона?** Три місця, де
+її не буде. Субтитри катсцен — це **звичайний текст усередині
+`demoSwapped.dat`** у `ww\dat_compressed`, а не в `common\localization`.
+Назви камуфляжів і предметів лежать у **457 файлах `.octs`** — текстовому
+контейнері, який легко проґавити. А вступні написи й фінальні титри — це
+**текстури**, запечені зображення, за якими взагалі немає рядка.
 
 **Як гра взагалі малює літеру?** За **сирим байтом**. Шляху через код-поїнт
 немає — байт напряму індексує комірку в атласі. Тому алфавітові поза Latin-1
