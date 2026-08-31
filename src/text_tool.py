@@ -180,8 +180,15 @@ def write_txt(path, strings, name):
 
 
 def read_txt(path):
+    """Read the editable .txt back into {index: text}.
+
+    `newline=''` matters: without it Python rewrites CRLF to LF while reading,
+    and a game string that contains CRLF comes back changed when nobody
+    touched it.  write_txt already writes with newline='\\n', so only the read
+    side needed it.  Measured on the shipped lang_en: 4 strings.
+    """
     out, cur, buf = {}, None, []
-    for raw in open(path, encoding='utf-8').read().split('\n'):
+    for raw in open(path, encoding='utf-8', newline='').read().split('\n'):
         if raw.startswith('### '):
             if cur is not None:
                 out[cur] = '\n'.join(buf).rstrip('\n')
@@ -206,6 +213,29 @@ def _load(name, game):
     return kind, ver, recs, data
 
 
+
+def _diff(strings, edits):
+    """Which blocks really changed -> {index: new text}.
+
+    A block is compared against the original AS THE .TXT COULD SHOW IT.  The
+    format ends every block with a blank line and read_txt strips that run,
+    so a string whose own text ends in a newline can never come back with it.
+    Re-attaching the original's trailing run before comparing keeps an
+    untouched file byte-identical and leaves a real edit alone.  Measured on
+    the shipped lang_en: 11 strings.
+    """
+    new = {}
+    for i, s in edits.items():
+        if i >= len(strings):
+            continue
+        orig = strings[i].decode('utf-8', 'replace')
+        tail = orig[len(orig.rstrip('\n')):]
+        cand = s + tail
+        if cand != orig:
+            new[i] = cand
+    return new
+
+
 def cmd_export(a):
     kind, ver, recs, _ = _load(a.name, a.game)
     strings = flat_strings(kind, recs)
@@ -217,12 +247,8 @@ def cmd_import(a):
     kind, ver, recs, _ = _load(a.name, a.game)
     strings = flat_strings(kind, recs)
     edits = read_txt(a.txt)
-    changed = 0
-    new = {}
-    for i, s in edits.items():
-        if i < len(strings) and s.encode('utf-8') != strings[i]:
-            new[i] = s
-            changed += 1
+    new = _diff(strings, edits)
+    changed = len(new)
     data = build(kind, ver, recs, new)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)) or '.', exist_ok=True)
     open(a.out, 'wb').write(data)
@@ -238,7 +264,20 @@ def cmd_verify(a):
     ok = rebuilt == data
     print('%s: no-op rebuild is %s (%d bytes)'
           % (a.name, 'BYTE-IDENTICAL' if ok else 'DIFFERENT', len(rebuilt)))
-    return 0 if ok else 1
+
+    # The rebuild above never touches the .txt, so it cannot catch a lossy
+    # export/import.  Do the full trip through a temporary file: export it,
+    # read it straight back with no edits, and rebuild.
+    import tempfile
+    strings = flat_strings(kind, recs)
+    with tempfile.TemporaryDirectory() as tmp:
+        txt = os.path.join(tmp, 'roundtrip.txt')
+        write_txt(txt, strings, a.name)
+        again = build(kind, ver, recs, _diff(strings, read_txt(txt)))
+    ok2 = again == data
+    print('%s: export -> import with no edits is %s'
+          % (a.name, 'BYTE-IDENTICAL' if ok2 else 'DIFFERENT'))
+    return 0 if (ok and ok2) else 1
 
 
 def main():

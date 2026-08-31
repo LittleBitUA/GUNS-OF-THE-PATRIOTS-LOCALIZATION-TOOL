@@ -138,6 +138,26 @@ and all of those must be recomputed when the text changes, or the game reads one
 string into the next. `text_tool.py` does this; `text_tool.py verify` proves a
 no-op rebuild is byte-identical.
 
+### The editable .txt is not a lossless container by itself
+
+`export` writes one block per string and `import` reads them back, but the
+block format cannot represent two things, and both were silently losing bytes
+until 2026-09-01:
+
+- **a string's own trailing newlines** — every block ends with a blank line,
+  and reading strips the whole run, so `...storage.
+` came back one byte
+  short. `import` now re-attaches whatever the original ended with before
+  deciding a block changed.
+- **CRLF inside a string** — reading the .txt without `newline=''` let Python
+  rewrite CRLF to LF, so four strings in `lang_en` looked edited when nobody
+  had touched them.
+
+Measured on the shipped `lang_en`: 15 of 4,291 strings were affected.
+`text_tool.py verify <name>` now performs the whole trip — export, read back
+with no edits, rebuild — and reports whether the result is byte-identical, so
+this class of loss cannot come back unnoticed.
+
 ### Line breaks
 
 `codec` and `lang` store a real newline inside a string. `spc`, `demo` and
