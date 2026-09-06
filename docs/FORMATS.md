@@ -227,8 +227,8 @@ is missing from the containers, check whether it is drawn as part of a sheet.
 
 **And some are baked into the interface layouts.** A label can be present in
 `lang`, translated, and still show in English because the screen reads a copy
-stored in its `.la2` layout instead. The codec contact names work exactly that
-way. See **[UI layouts (`.la2`) carry live text](#ui-layouts-la2-carry-live-text)**
+stored in its `.la2` layout instead — though be warned that many of those
+copies turn out to be placeholders. See **[UI layouts (`.la2`) carry live text](#ui-layouts-la2-carry-live-text)**
 below.
 
 
@@ -238,13 +238,13 @@ below.
 
 A fifth place text hides, and the only one that is not a "container" at all.
 
-The codec contact names are the clean example. `OTACON` also exists as a
-record in the `lang` container, but translating it there changes nothing: the
-codec screen never reads it. The name it draws is **baked into the interface
-layout**, and so are the frequency labels, `CONNECTING...`, `SELECT`, `SEND`,
-`MANUAL`, `BAND CONTROLS`, `TUNED`, the map legend (`BLOCKED PATH`,
-`ROAD BLOCK`, `DESTINATION`, `WIND DIRECTION`) and the map controls. One
-layout in this game holds **144 text fields**.
+One layout in this game holds **144 text fields**: contact names, frequency
+labels, `CONNECTING...`, `SELECT`, `SEND`, `MANUAL`, `BAND CONTROLS`, `TUNED`,
+the map legend (`BLOCKED PATH`, `ROAD BLOCK`, `DESTINATION`, `WIND DIRECTION`)
+and the map controls.
+
+Whether a given field is *live* is a separate question, and an important one —
+see the caution at the end of this section.
 
 ### The record format
 
@@ -287,10 +287,24 @@ relative path inside a mod package — and it is used as-is.
 
 - **Every string appears twice.** Layouts store each field in a pair, a few
   dozen bytes apart. Patch both or the change shows only in one state.
-- **Some fields are design-time placeholders.** Strings like `140.15`,
-  `23:59:10:00` or a row of `@` are overwritten by code at runtime, and so are
-  some real-looking labels. If a field does not change on screen, it was a
-  placeholder — check whether the live text comes from `lang` instead.
+- **Most fields are design-time placeholders**, and there is no way to tell
+  from the file which. Obvious ones look like data (`140.15`, `23:59:10:00`,
+  a row of `@`), but plain-looking labels behave the same way: the code writes
+  over them at runtime.
+
+That second point is worth a worked example, because it costs a day otherwise.
+The codec contact names look like the ideal case — `OTACON` sits in the layout,
+it is drawn in the bitmap font, `lang` has a record for it that the screen
+plainly ignores, and a single-byte replacement fits the field exactly. Editing
+all 22 name fields and dropping the layout in as a loose file changed nothing
+on screen. The loader log confirmed the game **read the edited file**
+(`opened=true`) and then overwrote the names anyway.
+
+So the mechanism works and the file is used; those particular fields are not
+the source. Before investing in a layout edit, change one field to something
+unmistakable, run the game, and check. A field that survives on screen is
+live; one that does not is a placeholder, and the real text is somewhere else
+entirely.
 
 ---
 
