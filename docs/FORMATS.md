@@ -225,6 +225,73 @@ texture path, not the text path.
 **Some UI strings are baked into atlases too.** Before concluding that a label
 is missing from the containers, check whether it is drawn as part of a sheet.
 
+**And some are baked into the interface layouts.** A label can be present in
+`lang`, translated, and still show in English because the screen reads a copy
+stored in its `.la2` layout instead. The codec contact names work exactly that
+way. See **[UI layouts (`.la2`) carry live text](#ui-layouts-la2-carry-live-text)**
+below.
+
+
+---
+
+## UI layouts (`.la2`) carry live text
+
+A fifth place text hides, and the only one that is not a "container" at all.
+
+The codec contact names are the clean example. `OTACON` also exists as a
+record in the `lang` container, but translating it there changes nothing: the
+codec screen never reads it. The name it draws is **baked into the interface
+layout**, and so are the frequency labels, `CONNECTING...`, `SELECT`, `SEND`,
+`MANUAL`, `BAND CONTROLS`, `TUNED`, the map legend (`BLOCKED PATH`,
+`ROAD BLOCK`, `DESTINATION`, `WIND DIRECTION`) and the map controls. One
+layout in this game holds **144 text fields**.
+
+### The record format
+
+Big-endian throughout:
+
+    00 0D | 00 14 | 00 00 00 09 | 'OLD SNAKE' 00 00 00
+    tag     size    length        payload
+
+`size` covers the whole record including its 8-byte header, so the payload
+budget is `size - 8` — for `0x14` that is 12 bytes, not 20. The field is
+**fixed**: a longer string does not fit, and a tool that writes one anyway
+will truncate it silently. Shorten the translation, or leave the field alone.
+
+This is where a single-byte code page pays off twice. These fields are drawn
+by the bitmap atlas, and one byte per letter means a Cyrillic name is the same
+length as the Latin one it replaces — `OTACON` (6) fits `ОТАКОН` (6),
+`CAMPBELL` (8) fits an 8-letter transliteration. No field has to grow.
+
+### Finding the layout for a widget
+
+The layout's file name is the same id that appears as the **middle u64 of a
+`lang` record header** — the value usually called the "widget". So a string
+you can see in `lang` tells you which `.la2` draws that screen, and vice
+versa.
+
+### Overriding one without touching the archives
+
+Layouts live inside the `slotdat\*.slot` archives, and those are not served
+by file path — a runtime override loader will not see them there. But the
+engine looks for a loose copy **first**:
+
+    common\ui_rpl_files\PC\slot\<slot>\<page>\cache\<id>.la2
+
+Only when that file is missing does it fall back to the archive. The game
+already ships some layouts loose in exactly that tree, so the path is a
+supported one, not a trick. Put an edited layout there — or in the same
+relative path inside a mod package — and it is used as-is.
+
+### Two cautions
+
+- **Every string appears twice.** Layouts store each field in a pair, a few
+  dozen bytes apart. Patch both or the change shows only in one state.
+- **Some fields are design-time placeholders.** Strings like `140.15`,
+  `23:59:10:00` or a row of `@` are overwritten by code at runtime, and so are
+  some real-looking labels. If a field does not change on screen, it was a
+  placeholder — check whether the live text comes from `lang` instead.
+
 ---
 
 ## Replacing a file while the game runs
@@ -252,8 +319,14 @@ screen, and why the choice between the bitmap atlas and the TrueType face is
 not recorded anywhere in the text files.
 
 `txnup_fonts_strict.py` locates the atlases: about **20 distinct glyph sheets**,
-duplicated into **336 copies** across the archives. Patch every copy, not only
-the screens you happened to walk through.
+duplicated into hundreds of copies across the archives. Patch every copy, not
+only the screens you happened to walk through.
+
+Treat that census as a floor, not a total. A correlation-based detector skips
+sheets it scores too low — in this game it missed two outright, one of which
+draws the alert indicator, and it undercounted the copies of several others
+(116 of 154 for one sheet). Whenever a screen still shows Latin-1 punctuation
+where letters belong, the sheet behind it is one the census did not list.
 
 ---
 

@@ -88,6 +88,31 @@ bitmap and mixed-case row labels are TTF.
 > split for that widget: 78 all-caps rows bitmap, 0 exceptions; 102
 > mixed-case rows TTF.
 
+
+## Bytes the engine keeps for itself
+
+`cell = byte - 0x20` holds, but not every byte reaches the atlas. Three groups
+are spoken for, and a letter placed on one of them fails in a way that looks
+like a font bug:
+
+- **The C1 range `0x80..0x9F`** is control space for the port. Most of it does
+  draw, but not all — verify each byte you intend to use with an on-screen
+  ruler rather than assuming.
+- **`0x84`** is substituted for an inline button-icon token. Repaint that cell
+  and the icon becomes a letter: a control hint reading `EXIT: PRESS <icon>`
+  turns into `EXIT: PRESS ф`. Leave the cell stock.
+- **`0xCC..0xCF` and `0xD7`** are reserved. A glyph written there comes out
+  **clipped** on screen even though the atlas itself is correct.
+
+The symptom tells you which of the two you hit. A glyph that is *smaller* than
+its neighbours was scaled down to fit the cell width budget. A glyph that is
+*cut off* is standing on a byte the engine reserved. They need opposite fixes,
+so it is worth being precise about which one you are looking at.
+
+Safe ground for extra letters is the row addressed by `0xC0..0xCB` — outside
+the control range and outside the reserved block.
+
+
 ## Coverage: patch every copy, not every screen you visited
 
 The obvious pipeline — log which textures the game reads, patch those — only
