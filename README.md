@@ -30,6 +30,7 @@ Made in Ukraine by **Dmytro Bidlov** — [Little Bit Team](https://t.me/LittleBi
 | **[docs/FONTS.md](docs/FONTS.md)** | how text is drawn, and adding an alphabet |
 | **[docs/MODLOADER.md](docs/MODLOADER.md)** | shipping a translation without rebuilding the archives |
 | **[docs/LAUNCHER.md](docs/LAUNCHER.md)** | the launcher is a separate Unity app, and its text |
+| **[docs/DEBUGGING.md](docs/DEBUGGING.md)** | proving what broke the game, without days of guessing |
 
 ---
 
