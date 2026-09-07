@@ -158,11 +158,60 @@ Measured on the shipped `lang_en`: 15 of 4,291 strings were affected.
 with no edits, rebuild — and reports whether the result is byte-identical, so
 this class of loss cannot come back unnoticed.
 
+
+### Backslash escapes in the text are the engine's, not yours
+
+Some `lang` records contain a literal escape sequence — the characters
+`\`, `x`, and two hex digits — rather than the byte itself. One item name is
+stored as the eight characters `iPod\x8e`, and the engine expands it to byte
+`0x8E` while drawing.
+
+Two consequences. An exporter must not "helpfully" decode or re-encode those
+four characters; they are the data. And if you repaint the atlas cell that
+byte lands on, the symbol it used to draw is gone — `®` became a Cyrillic
+letter for us until the record was rewritten as `iPod (R)`.
+
+### Line breaks are not the same in every container
+
+The PS3-era `codec` container stores real newlines. The others use a vertical
+bar. That matters the moment you try to match the same line across
+containers — an exact-string comparison finds almost nothing:
+
+```
+container   records   English with `|`   translations with a newline
+codec          4316                  0                         2212
+demo           4304                418                            0
+pclang         4268                784                            2
+```
+
+Normalise the separator away for the comparison, then write it back in the
+form the destination container uses. Matching one edited group across the
+whole file went from 14 hits to 241 once this was fixed.
+
+
 ### Line breaks
 
 `codec` and `lang` store a real newline inside a string. `spc`, `demo` and
 `movie` store a `|` character instead. Keep whichever the container you are
 editing already uses.
+
+
+### "No letters of my alphabet" is not the same as "not translated"
+
+A tempting shortcut when deciding which records to install is to skip any
+translation that contains none of your alphabet's letters. It silently loses
+real work.
+
+Deliberate Latin-only edits are a normal part of a translation pass: fixing
+the original's own typos (one French unit name is misspelled in the game),
+tightening punctuation (`.....` to `...`), spacing a model number (`Mk.II?` to
+`Mk. II?`), or replacing a symbol that no longer renders (`iPod®` to
+`iPod (R)`). Forty-three such records had been written, audited, counted as
+translated — and never reached the game, with no warning anywhere.
+
+Test for "identical to the original" instead. That is the condition you
+actually meant.
+
 
 ### The length limit that crashes the game
 

@@ -89,6 +89,56 @@ bitmap and mixed-case row labels are TTF.
 > mixed-case rows TTF.
 
 
+
+## A clipped glyph reads as a different letter
+
+Two failures look similar at a glance and have opposite causes. Telling them
+apart is worth doing before you change anything.
+
+**Smaller than its neighbours** — the glyph was scaled down to fit the cell
+width. Harmless in itself, ugly at small sizes.
+
+**Cut off** — the right-hand side is missing. This is the dangerous one,
+because the remainder is often a *valid different letter*: a Cyrillic `В` with
+its right edge gone reads as `Е`, and a cut `А` reads as `F`. A screenshot of
+`НОМАД` came back as `НОМFД`, and the obvious conclusion — that the engine was
+substituting a character at runtime — was wrong. Nothing was substituted. One
+letter was clipped.
+
+That misreading cost a full round of investigation, so: **zoom the screenshot
+before theorising**. At thumbnail scale a clipped letter and a substituted one
+are indistinguishable.
+
+### Measuring it
+
+Your Cyrillic sits in cells that held Latin-1 punctuation and accents, and
+those stock glyphs are often much narrower than a capital letter. Compare each
+of your glyphs against the stock glyph **in the same cell**, not against the
+sheet's widest letter:
+
+```
+2048x512    Й +29px   Д +27   А +21   В +18   З +18   Г +17   К +17
+1024x256    Й +20     Д +16   В +15   К +15   Ь +15   А +14   Г +14
+512x256     Н +10     Д +7    М +6    А +5    Г +4    Ь +2
+```
+
+On the smallest sheet the injected glyphs reach 16px in a 16px cell — edge to
+edge, with no gap at all. Leaving two pixels of margin is cheap insurance.
+
+### Ink below the baseline
+
+The same measurement catches a second problem. Letters with legs or a breve —
+`Д`, `Ц`, `Щ`, `Й` — can extend below the lowest ink of any stock glyph on the
+sheet:
+
+```
+1024x256   stock ink ends at y=33;   Д=36  Ц=36  Щ=36  Й=34
+```
+
+Three pixels is enough to show as smudges under the line of text on screen.
+Measure against the stock bottom, not against the cell height.
+
+
 ## Bytes the engine keeps for itself
 
 `cell = byte - 0x20` holds, but not every byte reaches the atlas. Three groups

@@ -28,6 +28,7 @@ Made in Ukraine by **Dmytro Bidlov** — [Little Bit Team](https://t.me/LittleBi
 | [The scripts](#the-scripts) · [FAQ](#how-the-formats-work--faq) | reference |
 | **[docs/FORMATS.md](docs/FORMATS.md)** | every container, in detail |
 | **[docs/FONTS.md](docs/FONTS.md)** | how text is drawn, and adding an alphabet |
+| **[docs/MODLOADER.md](docs/MODLOADER.md)** | shipping a translation without rebuilding the archives |
 
 ---
 
