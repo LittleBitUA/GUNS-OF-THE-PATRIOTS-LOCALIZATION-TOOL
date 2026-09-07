@@ -24,7 +24,7 @@ Made in Ukraine by **Dmytro Bidlov** — [Little Bit Team](https://t.me/LittleBi
 | | |
 |---|---|
 | [What is in here](#what-is-in-here) · [Requirements](#requirements) | start here |
-| [Text](#text-translate-the-dialogue-and-menus) · [Textures](#textures-replace-an-image) | the two workflows |
+| [Text](#text-translate-the-dialogue-and-menus) · [Textures](#textures-replace-an-image) | the two main workflows |
 | [The scripts](#the-scripts) · [FAQ](#how-the-formats-work--faq) | reference |
 | **[docs/FORMATS.md](docs/FORMATS.md)** | every container, in detail |
 | **[docs/FONTS.md](docs/FONTS.md)** | how text is drawn, and adding an alphabet |
@@ -36,13 +36,17 @@ Made in Ukraine by **Dmytro Bidlov** — [Little Bit Team](https://t.me/LittleBi
 
 ## What is in here
 
-Two independent toolsets:
+Three independent toolsets:
 
 - **Text** — export the in-game strings to editable `.txt`, translate them, and
   import them back. Every string has a byte-length field the game reads; the
   importer recomputes it, so a translated line of any length loads correctly.
 - **Textures** — unpack the texture archives, edit an image, and inject it back
-  without corrupting the archive.
+  without corrupting the archive. The **fonts are textures too**, so adding an
+  alphabet the game never shipped happens here.
+- **Launcher** — the window that appears before the game is a separate Unity
+  application with its own text, and none of the above reaches it. Its bundles
+  are read and rebuilt without Unity or any asset editor.
 
 **Nothing here writes into the game on its own.** Every tool reads from the game
 and writes its output to a folder you choose. You copy the result into the game
@@ -156,6 +160,25 @@ FAQ). Every copy of the texture in the archive is updated together.
 | `mgstex.py`, `mgsbc.py` | DDS math, BC1/BC3 decode (via Pillow) and encode |
 | `mgs4paths.py` | locate the game install |
 
+**Fonts and layouts**
+
+| script | what it does |
+|---|---|
+| `font_preview.py` | draw a string exactly as the engine will; `--cells` numbers the grid |
+| `byte_probe.py` | paint a byte ruler into a menu — one screenshot maps the atlas |
+| `sbc_codepage.py` | the single-byte code page: the map, and what the engine reserves |
+| `la2_text.py` | list and edit the text baked into UI layouts (`.la2`) |
+
+**Launcher** (a separate Unity application)
+
+| script | what it does |
+|---|---|
+| `launcher_text.py` | export / import its UI text, in the same block format |
+| `unityfs.py` | the `UnityFS` bundle container: blocks, nodes, writing one back |
+| `serialized.py` | `SerializedFile`: object table, type trees, rebuilding |
+| `typetree.py` | decode an object through its type tree, and encode it again |
+| `launcher_paths.py` | locate the launcher next to the game |
+
 ## How the formats work — FAQ
 
 The full write-up is in **[docs/FORMATS.md](docs/FORMATS.md)**. The short
@@ -223,6 +246,48 @@ the text files** — we checked four ways, and `docs/FONTS.md` lists them. The
 widget id is the best predictor available; individual keys inside one widget
 can go the other way, so keep a short per-key exception list.
 
+**Do I have to rebuild a 4.9 GB archive to ship this?** No. The game has a
+community runtime override loader, and dropping a file into a mod folder is
+enough — which is also what makes a translation uninstallable. What it can and
+cannot intercept, and one blind spot that will cost you an evening, are in
+**[docs/MODLOADER.md](docs/MODLOADER.md)**.
+
+**My override does nothing and the log says the file was read anyway.** The
+game opens files both as `C:\...` and as `\\?\C:\...`, and the loader only
+resolves the plain form. Every extended-length request falls through silently.
+UI layouts are requested that way.
+
+**Is the launcher part of the game?** No — it is a separate Unity application
+sitting beside it, with its own text in Addressables bundles, and none of the
+MGS4 tools reach it. It also has no override loader, so installing there means
+overwriting. See **[docs/LAUNCHER.md](docs/LAUNCHER.md)**.
+
+**A letter renders as a different letter — is my encoding wrong?** Probably
+not. A glyph wider than the space the engine paints gets **cut off**, and the
+remainder is often a valid different letter: a clipped `В` reads as `Е`, a
+clipped `А` as `F`. A clipped glyph and a merely small one have opposite
+causes, so zoom the screenshot before theorising. `font_preview.py` draws the
+string as the engine will, which settles it without another rebuild.
+
+**How do I find out which bytes are safe to use?** Paint a ruler.
+`byte_probe.py` replaces three stacked labels with runs of consecutive bytes,
+so one screenshot maps the whole range instead of finding each bad byte with
+its own rebuild. Roughly half the usable range is the C1 control block and the
+port swallows an unpredictable subset of it.
+
+**I fixed a typo in the English and it never appeared in the game.** Check
+whether your importer skips translations that contain none of your alphabet's
+letters. Deliberate Latin-only edits are normal — fixing the original's own
+typos, spacing a model number, replacing a symbol that no longer renders — and
+a "does it look translated?" test loses all of them silently. Test for
+"identical to the original" instead.
+
+**The game crashes and I have no idea which file.** Get a reproduction first,
+then bisect by swapping whole files rather than reading data.
+**[docs/DEBUGGING.md](docs/DEBUGGING.md)** walks through it, including the bug
+that motivated it: a bounded list of 1025 entries, overflowing because
+translated text is simply longer.
+
 **Are the mipmaps where I expect them?** No. A texture cache is split across a
 pair of `.dlz` files: `<name>_d.dlz` holds mip 0 on its own and `<name>.dlz`
 holds the rest, so a naive concatenation gives you the chain backwards. Pair
@@ -251,23 +316,30 @@ PC-видання зберігає **текстури** й **текст**. У ц
 | | |
 |---|---|
 | [Що тут є](#що-тут-є) · [Що потрібно](#що-потрібно) | почни звідси |
-| [Текст](#текст-переклад-діалогів-і-меню) · [Текстури](#текстури-заміна-зображення) | два робочі процеси |
+| [Текст](#текст-переклад-діалогів-і-меню) · [Текстури](#текстури-заміна-зображення) | два основні процеси |
 | [Скрипти](#скрипти) · [FAQ](#як-влаштовані-формати--faq) | довідка |
 | **[docs/FORMATS.md](docs/FORMATS.md)** | кожен контейнер, детально |
 | **[docs/FONTS.md](docs/FONTS.md)** | як малюється текст і як додати алфавіт |
+| **[docs/MODLOADER.md](docs/MODLOADER.md)** | віддати переклад, не перезбираючи архіви |
+| **[docs/LAUNCHER.md](docs/LAUNCHER.md)** | лаунчер — окремий застосунок на Unity |
+| **[docs/DEBUGGING.md](docs/DEBUGGING.md)** | як довести, що саме зламало гру |
 
 ---
 
 ## Що тут є
 
-Два незалежні набори:
+Три незалежні набори:
 
 - **Текст** — вивантаження ігрових рядків у редагований `.txt`, переклад і
   завантаження назад. Кожен рядок має поле довжини в байтах, яке читає гра;
   імпортер його перераховує, тож перекладений рядок будь-якої довжини
   завантажиться правильно.
 - **Текстури** — розпакування текстурних архівів, редагування зображення й
-  вставка назад без пошкодження архіву.
+  вставка назад без пошкодження архіву. **Шрифти — теж текстури**, тож алфавіт,
+  якого в грі не було, додається саме тут.
+- **Лаунчер** — вікно, що відкривається перед грою, це окремий застосунок на
+  Unity зі своїм текстом, і жоден із наборів вище до нього не дістає. Його
+  бандли читаються й перезбираються без Unity й без редакторів ассетів.
 
 **У теку гри тут нічого не пишеться саме собою.** Кожен інструмент читає з гри
 й пише результат у теку, яку ти обереш. Копіюєш результат у гру сам. Спершу
@@ -373,6 +445,25 @@ python src/txn_png.py inject edited.png --txn title/cache/0015161c.txn --apply
 | `mgstex.py`, `mgsbc.py` | арифметика DDS, декодування BC1/BC3 і кодування |
 | `mgs4paths.py` | знайти встановлену гру |
 
+**Шрифти й розкладки**
+
+| скрипт | що робить |
+|---|---|
+| `font_preview.py` | намалювати рядок точно так, як його намалює гра; `--cells` нумерує сітку |
+| `byte_probe.py` | вивести лінійку байтів у меню — один скріншот мапить атлас |
+| `sbc_codepage.py` | однобайтна кодова сторінка: розкладка й те, що рушій тримає для себе |
+| `la2_text.py` | список і правка тексту, запеченого в розкладки (`.la2`) |
+
+**Лаунчер** (окремий застосунок на Unity)
+
+| скрипт | що робить |
+|---|---|
+| `launcher_text.py` | експорт / імпорт його тексту, у тому самому блоковому форматі |
+| `unityfs.py` | контейнер бандла `UnityFS`: блоки, вузли, запис назад |
+| `serialized.py` | `SerializedFile`: таблиця об'єктів, дерева типів, перезбирання |
+| `typetree.py` | читання об'єкта деревом типів і запис назад |
+| `launcher_paths.py` | знайти лаунчер поруч із грою |
+
 ## Як влаштовані формати — FAQ
 
 Повний розбір — у **[docs/FORMATS.md](docs/FORMATS.md)**. Коротко:
@@ -431,6 +522,48 @@ TrueType-віджет, не є валідним UTF-8, тож двигун ві�
 файлах** — перевірено чотирма способами, вони перелічені в `docs/FONTS.md`.
 Найкращий предиктор — id віджета, але окремі ключі всередині одного віджета
 можуть поводитись навпаки, тож потрібен короткий список винятків.
+
+**Чи треба перезбирати архів на 4,9 ГБ, щоб це віддати?** Ні. Для гри є
+спільнотний завантажувач оверрайдів, і досить покласти файл у теку мода — саме
+це й робить переклад таким, що знімається. Що він перехоплює, а що ні, і одна
+сліпа зона, яка коштує вечора, — у
+**[docs/MODLOADER.md](docs/MODLOADER.md)**.
+
+**Оверрайд не діє, хоч у журналі файл прочитано.** Гра відкриває файли і як
+`C:\...`, і як `\\?\C:\...`, а завантажувач розв'язує лише першу форму. Усі
+запити в розширеній формі проходять повз, мовчки. Саме так запитуються
+розкладки інтерфейсу.
+
+**Лаунчер — частина гри?** Ні, це окремий застосунок на Unity поруч із нею, з
+власним текстом у бандлах Addressables, і жоден інструмент для MGS4 до нього
+не дістає. Мод-системи там теж немає, тож установлення означає перезапис. Див.
+**[docs/LAUNCHER.md](docs/LAUNCHER.md)**.
+
+**Літера малюється як інша — це я щось наплутав із кодуванням?** Найпевніше ні.
+Гліф, ширший за те, що рушій зафарбовує, **обрізається**, і залишок часто
+читається як інша дійсна літера: обрізана `В` — як `Е`, обрізана `А` — як `F`.
+Обрізаний гліф і просто дрібний мають протилежні причини, тож спершу наблизь
+скріншот. `font_preview.py` малює рядок так, як його намалює гра, і знімає
+питання без ще однієї перезбірки.
+
+**Як дізнатися, які байти взагалі придатні?** Намалювати лінійку.
+`byte_probe.py` підміняє три написи поспіль рядами послідовних байтів, тож
+один скріншот мапить увесь діапазон замість «одна перезбірка на кожен
+зламаний байт». Приблизно половина придатного діапазону — це керуючий блок C1,
+і порт ковтає з нього непередбачувану частину.
+
+**Виправив помилку в англійському тексті, а в грі її немає.** Перевір, чи не
+відкидає твій імпортер переклади, у яких немає жодної літери твого алфавіту.
+Свідомі правки латиницею — річ звичайна: виправити помилку самого оригіналу,
+розставити пробіли в назві моделі, замінити символ, який більше не малюється.
+Перевірка «схоже на переклад?» губить їх усі мовчки. Питати треба інше: чи
+збігається рядок з оригіналом.
+
+**Гра падає, і я не знаю через який файл.** Спершу здобудь відтворення, а тоді
+бісекція **підміною цілих файлів**, а не читанням даних.
+**[docs/DEBUGGING.md](docs/DEBUGGING.md)** проходить це крок за кроком, разом
+із помилкою, що все й почала: обмежений список на 1025 записів, який
+переповнюється, бо перекладений текст просто довший.
 
 **Чи мипи там, де очікуєш?** Ні. Кеш текстури розрізаний на два `.dlz`:
 `<назва>_d.dlz` тримає сам mip 0, а `<назва>.dlz` — решту, тож наївне
