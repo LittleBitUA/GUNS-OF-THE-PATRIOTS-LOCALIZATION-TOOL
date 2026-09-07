@@ -181,19 +181,20 @@ containers — an exact-string comparison finds almost nothing:
 container   records   English with `|`   translations with a newline
 codec          4316                  0                         2212
 demo           4304                418                            0
-pclang         4268                784                            2
+lang           4268                784                            2
+spc            3595                322                            0
 ```
 
-Normalise the separator away for the comparison, then write it back in the
-form the destination container uses. Matching one edited group across the
-whole file went from 14 hits to 241 once this was fixed.
+So `codec` is the odd one out: it is the only container that stores a real
+newline. Everything else — including `lang`, which an earlier version of this
+document had on the wrong side — uses the bar. When editing a container
+directly, keep whichever form it already uses.
 
+For matching across containers, normalise the separator away for the
+comparison and write it back in the destination's own form. Matching one
+edited group across the whole file went from 14 hits to 241 once this was
+fixed.
 
-### Line breaks
-
-`codec` and `lang` store a real newline inside a string. `spc`, `demo` and
-`movie` store a `|` character instead. Keep whichever the container you are
-editing already uses.
 
 
 ### "No letters of my alphabet" is not the same as "not translated"
